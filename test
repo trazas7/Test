@@ -1,17 +1,1 @@
-CKEDITOR.replace('editor1').on('paste', function(evt) {
-    // Attempt to detect if the pasted content is from Excel by looking for specific Excel-related markers in the HTML.
-    // This might need to be adjusted based on the actual content Excel puts on the clipboard.
-    var isFromExcel = /<meta.*?Excel/.test(evt.data.dataValue);
 
-    // Use a regex or other means to determine if the pasted content includes an image (e.g., a base64 encoded image).
-    // This is a simple example and might need to be refined to more accurately detect images from Excel.
-    var containsImage = /<img src="data:image/.test(evt.data.dataValue);
-
-    if (isFromExcel && containsImage) {
-        // Modify evt.data.dataValue here to remove the image, preserve only the text,
-        // or otherwise adjust the pasted content before it's inserted into CKEditor.
-        // This example removes the image tag, but you might need a more sophisticated approach
-        // depending on the structure of the pasted content.
-        evt.data.dataValue = evt.data.dataValue.replace(/<img src="data:image[^>]+>/, '');
-    }
-});
