@@ -1,5 +1,1 @@
-<springProperty scope="context" name="appLogDir" source="samson.AppLogDir"/>
-    <springProperty scope="context" name="domain" source="Domain"/>
 
-    <!-- Define the base directory for your special logs using concatenated environment variables -->
-    <property name="LOGS_BASE_DIR" value="${appLogDir}/${domain}"/>
