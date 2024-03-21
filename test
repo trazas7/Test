@@ -1,1 +1,2 @@
+<property name="LOGS_BASE_DIR" value="${samson.AppLogDir:-defaultAppLogDir}/${Domain:-defaultDomain}"/>
 
