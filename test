@@ -1,2 +1,83 @@
-<property name="LOGS_BASE_DIR" value="${samson.AppLogDir:-defaultAppLogDir}/${Domain:-defaultDomain}"/>
+import java.util.List;
 
+public class LogEntryDto {
+    private String uid;
+    private String type;
+    private String message;
+    private int versionCode;
+    private String platform;
+    private String submitted; // Consider using a proper Date type
+    private List<LogDetailDto> logs;
+
+    // Getters and setters
+}
+
+public class LogDetailDto {
+    private String log;
+    private String level;
+    private String date; // Consider using a proper Date type
+
+    // Getters and setters
+}
+
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+@RestController
+public class LogEntryController {
+
+    private static final Logger specialLogger = LoggerFactory.getLogger("specialLogger");
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("E MMM dd yyyy HH mm");
+
+    @PostMapping("/api/log")
+    public void logEntry(@RequestBody LogEntryDto logEntry) {
+        // Log the general information about the bug report
+        String header = String.format("UID: %s, Type: %s, Message: %s, VersionCode: %d, Platform: %s, Submitted: %s",
+                logEntry.getUid(), logEntry.getType(), logEntry.getMessage(), logEntry.getVersionCode(),
+                logEntry.getPlatform(), logEntry.getSubmitted());
+        specialLogger.info(header);
+
+        // Process and log each detailed log entry
+        for (LogDetailDto detail : logEntry.getLogs()) {
+            logDetail(detail);
+        }
+    }
+
+    private void logDetail(LogDetailDto detail) {
+        // Attempt to parse the date, log without date if parsing fails
+        String formattedDate;
+        try {
+            Date date = dateFormat.parse(detail.getDate());
+            formattedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
+        } catch (Exception e) {
+            formattedDate = "Unknown Date";
+            specialLogger.error("Failed to parse date: " + detail.getDate(), e);
+        }
+
+        String logMessage = String.format("[%s] [%s] - %s", formattedDate, detail.getLevel().toUpperCase(), detail.getLog());
+
+        // Log the message using the special logger
+        switch (detail.getLevel().toLowerCase()) {
+            case "debug":
+                specialLogger.debug(logMessage);
+                break;
+            case "info":
+                specialLogger.info(logMessage);
+                break;
+            case "warn":
+                specialLogger.warn(logMessage);
+                break;
+            case "error":
+                specialLogger.error(logMessage);
+                break;
+            default:
+                specialLogger.info(logMessage); // Default to INFO if unknown level
+        }
+    }
+}
