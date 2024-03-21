@@ -1,1 +1,37 @@
 
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Include default Spring Boot logging configuration -->
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+
+    <!-- Define the base directory for your special logs -->
+    <property name="LOGS_BASE_DIR" value="C:/data/logs/gmportal/share-ui"/>
+
+    <!-- Special logger appender configuration -->
+    <appender name="SPECIAL-LOGGER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Log file location and pattern -->
+            <fileNamePattern>${LOGS_BASE_DIR}/%d{dd-MM-yyyy}/service-name.log</fileNamePattern>
+            <!-- Keep 30 days worth of logs -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Special logger definition -->
+    <logger name="specialLogger" level="INFO" additivity="false">
+        <appender-ref ref="SPECIAL-LOGGER"/>
+    </logger>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+        <!-- Uncomment if you want the special logger to capture all logs as well -->
+        <!-- <appender-ref ref="SPECIAL-LOGGER"/> -->
+    </root>
+
+</configuration>
