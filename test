@@ -1,1 +1,53 @@
 
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.stereotype.Component;
+import java.util.Date;
+
+@EnableScheduling
+@Component
+public class PublicationScheduler {
+
+    private final ThreadPoolTaskScheduler taskScheduler;
+
+    public PublicationScheduler() {
+        this.taskScheduler = new ThreadPoolTaskScheduler();
+        this.taskScheduler.initialize();
+    }
+
+    @Scheduled(cron = "0 55 6 * * *") // Runs at 6:55 every day
+    public void fetchAndSendPublications() {
+        boolean publicationsPresent = checkForPublications();
+
+        if (publicationsPresent) {
+            // Logic to send email
+            System.out.println("Publications fetched and email sent.");
+        } else {
+            System.out.println("Publications not present, scheduling retry after 5 minutes.");
+            scheduleRetry();
+        }
+    }
+
+    private void scheduleRetry() {
+        taskScheduler.schedule(this::retryFetchAndSend, new Date(System.currentTimeMillis() + 300000)); // 300000 milliseconds = 5 minutes
+    }
+
+    private void retryFetchAndSend() {
+        boolean publicationsPresent = checkForPublications();
+
+        if (publicationsPresent) {
+            // Logic to send email
+            System.out.println("Retry successful: Publications fetched and email sent.");
+        } else {
+            System.out.println("Retry failed: Publications still not present.");
+            // Implement further retry logic here if needed
+        }
+    }
+
+    private boolean checkForPublications() {
+        // Implement logic to check for publications in the database
+        // Return true if publications are present, false otherwise
+        return false; // Placeholder return statement
+    }
+}
