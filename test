@@ -1,0 +1,28 @@
+List<Announcement> announcements = announcementDTOs.stream()
+                .map(this::mapToEntity)
+                .collect(Collectors.toList());
+        
+        announcements.forEach(announcement -> 
+            announcement.getAnnouncementAttributes().forEach(attribute -> attribute.setAnnouncement(announcement))
+        );
+
+   private Announcement mapToEntity(AnnouncementDTO dto) {
+        Announcement announcement = new Announcement();
+        announcement.setId(dto.getId());
+        announcement.setTitle(dto.getTitle());
+        
+        List<AnnouncementAttribute> attributes = dto.getAnnouncementAttributes().stream()
+                .map(attributeDTO -> {
+                    AnnouncementAttribute attribute = new AnnouncementAttribute();
+                    attribute.setId(attributeDTO.getId());
+                    attribute.setKey(attributeDTO.getKey());
+                    attribute.setValue(attributeDTO.getValue());
+                    attribute.setAnnouncement(announcement);
+                    return attribute;
+                }).collect(Collectors.toList());
+        
+        announcement.setAnnouncementAttributes(attributes);
+        return announcement;
+    }
+
+Test: 905
