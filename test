@@ -1,84 +1,45 @@
-import net.javacrumbs.shedlock.core.LockConfiguration;
-import net.javacrumbs.shedlock.core.LockProvider;
-import net.javacrumbs.shedlock.core.SimpleLock;
-import org.aopalliance.intercept.MethodInterceptor;
-import org.aopalliance.intercept.MethodInvocation;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.integration.config.EnableIntegration;
-import org.springframework.integration.dsl.IntegrationFlow;
-import org.springframework.integration.dsl.IntegrationFlows;
-import org.springframework.integration.dsl.Pollers;
-import org.springframework.integration.file.dsl.Files;
-import org.springframework.messaging.MessageChannel;
-import org.springframework.integration.channel.DirectChannel;
+@Service
+public class FileLockingService {
 
-import java.io.File;
-import java.time.Duration;
-import java.util.Optional;
+    @Autowired
+    private LockProvider lockProvider;
 
-@Configuration
-@EnableIntegration
-public class IntegrationConfig {
-
-    @Bean
-    public MessageChannel fileInputChannel() {
-        return new DirectChannel();
+    public Advice fileProcessingAdvice(String lockKey) {
+        return new DefaultLockingTaskExecutor(lockProvider, lockConfigurationBuilder -> {
+            lockConfigurationBuilder
+                .withLockAtMostFor(Duration.ofMinutes(10))
+                .withLockAtLeastFor(Duration.ofMinutes(1));
+            return lockConfigurationBuilder;
+        }, lockKey);
     }
+}
 
+
+@Component
+public class TxtFileAggregator implements AggregatorContentProcessor {
+
+    @Autowired
+    private FileLockingService fileLockingService;
+
+    @Override
     @Bean
-    public IntegrationFlow fileReadingFlow(LockProvider lockProvider) {
-        return IntegrationFlows.from(Files.inboundAdapter(new File("/path/to/directory"))
-                        .patternFilter("*.txt"),
-                e -> e.poller(Pollers.fixedDelay(1000).advice(shedLockAdvice(lockProvider))))
-                .channel(fileInputChannel())
-                .handle(fileProcessor(), "process")
+    public IntegrationFlow setupFlow() {
+        return IntegrationFlows.from(Files.inboundAdapter(new File("/path/to/txtFiles"))
+                                .patternFilter("*.txt"),
+                        e -> e.poller(Pollers.fixedDelay(1000)
+                                          .advice(fileProcessingAdviceForFiles())))
+                .handle(this::process)
                 .get();
     }
 
-    @Bean
-    public FileProcessor fileProcessor() {
-        return new FileProcessor();
+    private Advice fileProcessingAdviceForFiles() {
+        ExpressionEvaluatingRequestHandlerAdvice advice = new ExpressionEvaluatingRequestHandlerAdvice();
+        advice.setOnSuccessExpressionString("@fileLockingService.fileProcessingAdvice(payload.absolutePath)");
+        advice.setPropagateEvaluationFailures(false);
+        return advice;
     }
 
-    @Bean
-    public MethodInterceptor shedLockAdvice(LockProvider lockProvider) {
-        return new MethodInterceptor() {
-            @Override
-            public Object invoke(MethodInvocation invocation) throws Throwable {
-                LockConfiguration lockConfiguration = new LockConfiguration(
-                        ClockProvider.now(), "fileReadingFlow.lock", 
-                        Duration.ofSeconds(30), Duration.ofSeconds(10));
-                
-                Optional<SimpleLock> lock = lockProvider.lock(lockConfiguration);
-
-                if (lock.isPresent()) {
-                    try {
-                        return invocation.proceed();
-                    } finally {
-                        lock.get().unlock();
-                    }
-                } else {
-                    System.out.println("Lock not acquired, skipping execution");
-                    return null;
-                }
-            }
-        };
+    private void process(File file) {
+        System.out.println("Processing TXT file: " + file.getName());
     }
 }
-
-@Configuration
-public class ShedLockConfig {
-
-    @Bean
-    public LockProvider lockProvider(DataSource dataSource) {
-        return new JdbcTemplateLockProvider(
-                JdbcTemplateLockProvider.Configuration.builder()
-                        .withJdbcTemplate(new JdbcTemplate(dataSource))
-                        .usingDbTime() // Works with MySQL, PostgreSQL, Oracle, MS SQL, H2, and others
-                        .build()
-        );
-    }
-}
-
-
