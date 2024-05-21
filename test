@@ -66,3 +66,19 @@ public class IntegrationConfig {
         };
     }
 }
+
+@Configuration
+public class ShedLockConfig {
+
+    @Bean
+    public LockProvider lockProvider(DataSource dataSource) {
+        return new JdbcTemplateLockProvider(
+                JdbcTemplateLockProvider.Configuration.builder()
+                        .withJdbcTemplate(new JdbcTemplate(dataSource))
+                        .usingDbTime() // Works with MySQL, PostgreSQL, Oracle, MS SQL, H2, and others
+                        .build()
+        );
+    }
+}
+
+
