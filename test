@@ -1,52 +1,42 @@
 
-import com.jcraft.jsch.ChannelSftp;
-import org.springframework.integration.dsl.IntegrationFlow;
-import org.springframework.integration.dsl.IntegrationFlows;
-import org.springframework.integration.file.filters.CompositeFileListFilter;
-import org.springframework.integration.file.filters.FileSystemPersistentAcceptOnceFileListFilter;
-import org.springframework.integration.file.filters.SftpPersistentAcceptOnceFileListFilter;
-import org.springframework.integration.sftp.dsl.Sftp;
-import org.springframework.integration.sftp.session.DefaultSftpSessionFactory;
-import org.springframework.integration.metadata.ConcurrentMetadataStore;
-import org.springframework.integration.metadata.SimpleMetadataStore;
-import org.springframework.integration.dsl.Pollers;
+import * as XLSX from 'xlsx';
 
-import java.io.File;
-import java.util.concurrent.TimeUnit;
+export class YourComponent {
+  invalidEmails: string[] = [
+    'invalid1@example.com',
+    'invalid2@example.com',
+    'invalid3@example.com',
+    // Add more invalid emails as needed
+  ];
 
-public class SftpIntegrationFlow {
+  downloadFile() {
+    // Generate worksheet from invalid emails
+    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(this.invalidEmails.map(email => ({ email })));
 
-    public IntegrationFlow getIntegrationFlow(String aggregatorName, String flowid, ConcurrentMetadataStore metadataStore) {
-        DefaultSftpSessionFactory sf = sftpSessionFactory(aggregatorName);
-        if (sf != null) {
-            CompositeFileListFilter<ChannelSftp.LsEntry> compositeFilter = new CompositeFileListFilter<>();
-            compositeFilter.addFilter(new SftpPersistentAcceptOnceFileListFilter(metadataStore, "INT_"));
-            compositeFilter.addFilter(new FileSystemPersistentAcceptOnceFileListFilter<>(new SimpleMetadataStore(), "INT_FS_"));
+    // Generate workbook and add the worksheet
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Invalid Emails');
 
-            return IntegrationFlows.from(Sftp.inboundAdapter(sf)
-                        .preserveTimestamp(true)
-                        .autoCreateLocalDirectory(true)
-                        .remoteDirectory(nodes.getAggregators().get(aggregatorName).getInputFolder())
-                        .localDirectory(new File(nodes.getBaseFolder() + "/" + aggregatorName))
-                        .filter(compositeFilter),
-                    e -> e.id(flowid)
-                         .autoStartup(true)
-                         .poller(Pollers.fixedDelay(nodes.getPollIntervalSecs(), TimeUnit.SECONDS)))
-                .filter(source -> ((File) source).getName().endsWith(fileSuffix))
-                .channel("nullChannel")
-                .get();
-        }
-        return null;
-    }
+    // Generate binary string representation of the workbook
+    const wbout: string = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
 
-    private DefaultSftpSessionFactory sftpSessionFactory(String aggregatorName) {
-        // Implementation for creating and returning an SFTP session factory
-        // based on the aggregatorName, which is not provided in the initial code.
-        // Assume some configurations and initialization here.
-        return new DefaultSftpSessionFactory();
-    }
-    
-    // Assuming nodes is a placeholder for your configuration object
-    private Nodes nodes;
-    private String fileSuffix;
+    // Function to convert a string to an ArrayBuffer
+    const s2ab = (s: string): ArrayBuffer => {
+      const buf = new ArrayBuffer(s.length);
+      const view = new Uint8Array(buf);
+      for (let i = 0; i < s.length; i++) {
+        view[i] = s.charCodeAt(i) & 0xFF;
+      }
+      return buf;
+    };
+
+    // Create a blob from the binary string and generate a download link
+    const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'invalid_emails.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
 }
