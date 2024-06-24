@@ -1,42 +1,129 @@
 
-import * as XLSX from 'xlsx';
+Sure, using a native query might make it easier to directly reference the tables and columns involved. Here’s how you can achieve the same goal using a native query:
 
-export class YourComponent {
-  invalidEmails: string[] = [
-    'invalid1@example.com',
-    'invalid2@example.com',
-    'invalid3@example.com',
-    // Add more invalid emails as needed
-  ];
+### Step 1: Define the Native Query
 
-  downloadFile() {
-    // Generate worksheet from invalid emails
-    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(this.invalidEmails.map(email => ({ email })));
+You will write a native SQL query to join the necessary tables and select the required fields.
 
-    // Generate workbook and add the worksheet
-    const wb: XLSX.WorkBook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Invalid Emails');
+### Step 2: Define the DTO Class
 
-    // Generate binary string representation of the workbook
-    const wbout: string = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+Create a simple DTO class to hold the result of the query with the necessary fields.
 
-    // Function to convert a string to an ArrayBuffer
-    const s2ab = (s: string): ArrayBuffer => {
-      const buf = new ArrayBuffer(s.length);
-      const view = new Uint8Array(buf);
-      for (let i = 0; i < s.length; i++) {
-        view[i] = s.charCodeAt(i) & 0xFF;
-      }
-      return buf;
-    };
+### Step 3: Update the Repository Method to Return the DTO
 
-    // Create a blob from the binary string and generate a download link
-    const blob = new Blob([s2ab(wbout)], { type: 'application/octet-stream' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'invalid_emails.xlsx';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  }
+### Step 1: Define the Native Query
+
+Here’s the native query that joins the necessary tables and selects the required fields:
+
+```java
+@Query(value = "SELECT DISTINCT t.id, t.name, c1.first_name AS createdByFirstName, c1.last_name AS createdByLastName, " +
+               "c2.first_name AS modifiedByFirstName, c2.last_name AS modifiedByLastName " +
+               "FROM contact_template t " +
+               "LEFT JOIN contact_platform_login cpl1 ON t.created_by = cpl1.platform_login " +
+               "LEFT JOIN contact c1 ON cpl1.contact_id = c1.id " +
+               "LEFT JOIN contact_platform_login cpl2 ON t.modified_by = cpl2.platform_login " +
+               "LEFT JOIN contact c2 ON cpl2.contact_id = c2.id " +
+               "WHERE t.owner_ecold = :enablementContactId " +
+               "OR :enablementContactId IN (SELECT u.enablement_contact_id FROM shared_with_contacts u WHERE u.contact_template_id = t.id)", nativeQuery = true)
+List<ContactTemplateDto> findAllByOwnerEcoIdOrSharedWithContacts(@Param("enablementContactId") String enablementContactId);
+```
+
+### Step 2: Define the DTO Class
+
+Make sure you have the `ContactTemplateDto` class defined:
+
+```java
+package com.example.dto;
+
+public class ContactTemplateDto {
+    private Long id;
+    private String name;
+    private String createdByFirstName;
+    private String createdByLastName;
+    private String modifiedByFirstName;
+    private String modifiedByLastName;
+
+    // Constructor
+    public ContactTemplateDto(Long id, String name, String createdByFirstName, String createdByLastName, String modifiedByFirstName, String modifiedByLastName) {
+        this.id = id;
+        this.name = name;
+        this.createdByFirstName = createdByFirstName;
+        this.createdByLastName = createdByLastName;
+        this.modifiedByFirstName = modifiedByFirstName;
+        this.modifiedByLastName = modifiedByLastName;
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCreatedByFirstName() {
+        return createdByFirstName;
+    }
+
+    public void setCreatedByFirstName(String createdByFirstName) {
+        this.createdByFirstName = createdByFirstName;
+    }
+
+    public String getCreatedByLastName() {
+        return createdByLastName;
+    }
+
+    public void setCreatedByLastName(String createdByLastName) {
+        this.createdByLastName = createdByLastName;
+    }
+
+    public String getModifiedByFirstName() {
+        return modifiedByFirstName;
+    }
+
+    public void setModifiedByFirstName(String modifiedByFirstName) {
+        this.modifiedByFirstName = modifiedByFirstName;
+    }
+
+    public String getModifiedByLastName() {
+        return modifiedByLastName;
+    }
+
+    public void setModifiedByLastName(String modifiedByLastName) {
+        this.modifiedByLastName = modifiedByLastName;
+    }
 }
+```
+
+### Step 3: Update the Repository Method to Return the DTO
+
+Ensure your repository interface method returns the new DTO:
+
+```java
+public interface ContactTemplateRepository extends JpaRepository<ContactTemplate, Long> {
+    
+    @Query(value = "SELECT DISTINCT t.id, t.name, c1.first_name AS createdByFirstName, c1.last_name AS createdByLastName, " +
+                   "c2.first_name AS modifiedByFirstName, c2.last_name AS modifiedByLastName " +
+                   "FROM contact_template t " +
+                   "LEFT JOIN contact_platform_login cpl1 ON t.created_by = cpl1.platform_login " +
+                   "LEFT JOIN contact c1 ON cpl1.contact_id = c1.id " +
+                   "LEFT JOIN contact_platform_login cpl2 ON t.modified_by = cpl2.platform_login " +
+                   "LEFT JOIN contact c2 ON cpl2.contact_id = c2.id " +
+                   "WHERE t.owner_ecold = :enablementContactId " +
+                   "OR :enablementContactId IN (SELECT u.enablement_contact_id FROM shared_with_contacts u WHERE u.contact_template_id = t.id)", nativeQuery = true)
+    List<ContactTemplateDto> findAllByOwnerEcoIdOrSharedWithContacts(@Param("enablementContactId") String enablementContactId);
+}
+```
+
+### Summary
+
+This simplified approach uses a native SQL query to fetch the required data, which directly joins the necessary tables and maps the results to the `ContactTemplateDto` class. This makes the implementation more straightforward and easier to understand.
