@@ -1,3 +1,12 @@
 
-@Query("SELECT c FROM ContactPlatformLogin c WHERE c.appKey IN :appKeys AND LOWER(c.platformLogin) IN :lowerPlatformLogins")
-List<ContactPlatformLogin> findContactsByAppKeyAndPlatformLoginIgnoreCase(@Param("appKeys") List<String> appKeys, @Param("lowerPlatformLogins") List<String> lowerPlatformLogins);
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+
+public interface ContactPlatformLoginRepository extends JpaRepository<ContactPlatformLogin, Long> {
+
+    @Query("SELECT cpl.contact FROM ContactPlatformLogin cpl WHERE cpl.appKey = :appKey AND LOWER(cpl.platformLogin) IN :platformLogins")
+    List<Contact> findContactsByAppKeyAndPlatformLogins(@Param("appKey") String appKey, @Param("platformLogins") List<String> platformLogins);
+}
