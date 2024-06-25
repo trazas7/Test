@@ -1,9 +1,15 @@
 
-Map<String, Contact> loginContactMap = new HashMap<>();
-        for (Contact contact : contacts) {
-            for (Map.Entry<String, String> entry : contact.getPlatformLogins().entrySet()) {
-                if (entry.getKey().equals(request.getAppKey()) && lowerCaseLogins.contains(entry.getValue().toLowerCase())) {
-                    loginContactMap.put(entry.getValue(), contact);
-                }
-            }
-        }
+public interface ContactPlatformLoginRepository extends JpaRepository<ContactPlatformLogin, Long> {
+
+    @Query("SELECT cpl.platformLogin, CONCAT(c.firstName, ' ', c.lastName) " +
+           "FROM ContactPlatformLogin cpl " +
+           "JOIN cpl.contact c " +
+           "WHERE cpl.appKey = :appKey AND cpl.platformLogin IN :platformLogins")
+    List<Object[]> findPlatformLoginAndFullNameByAppKeyAndPlatformLogins(@Param("appKey") String appKey,
+                                                                         @Param("platformLogins") List<String> platformLogins);
+
+    default Map<String, String> getPlatformLoginAndFullNames(String appKey, List<String> platformLogins) {
+        List<Object[]> results = findPlatformLoginAndFullNameByAppKeyAndPlatformLogins(appKey, platformLogins);
+        return results.stream().collect(Collectors.toMap(result -> (String) result[0], result -> (String) result[1]));
+    }
+}
